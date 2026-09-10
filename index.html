@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Gemshaft Clicker</title>
+<style>
+:root{
+  --bg:#07101b;
+  --panel:#11263d;
+  --panel2:#173653;
+  --line:#3a638b;
+  --gridline:#25394d;
+  --text:#f7fbff;
+  --muted:#a7bdd3;
+  --yellow:#ffe25d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:linear-gradient(#10243c,#07101b);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button{font:inherit;-webkit-tap-highlight-color:transparent}
+.app{max-width:1180px;margin:auto;padding:10px}
+.topbar{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:9px}
+.stat{background:linear-gradient(#193b5f,#112841);border:1px solid #3b6792;border-radius:13px;padding:10px}
+.label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.value{font-size:22px;font-weight:900;margin-top:2px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:10px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.head h2{margin:0;font-size:15px}
+.small{font-size:11px;color:var(--muted)}
+.mine-shell{padding:8px;background:linear-gradient(#1a5276 0 5%,#5a3d4c 5% 100%)}
+.mine{
+  width:100%;
+  height:76vh;
+  min-height:580px;
+  max-height:850px;
+  overflow:auto;
+  border:2px solid #7198bf;
+  border-radius:11px;
+  background:#253849;
+  touch-action:pan-x pan-y;
+  scrollbar-color:#5f7d9a #122133;
+}
+.board{
+  position:relative;
+  margin:0 auto;
+  background:var(--gridline);
+}
+.grid{
+  position:absolute;
+  inset:0;
+  display:grid;
+  gap:1px;
+  background:var(--gridline);
+}
+.block{
+  position:relative;
+  width:100%;
+  height:100%;
+  border:0;
+  padding:0;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.13),transparent 35%),
+    #765265;
+  cursor:not-allowed;
+}
+.block:nth-child(3n){background:linear-gradient(135deg,rgba(255,255,255,.1),transparent 35%),#694a5c}
+.block:nth-child(4n){background:linear-gradient(135deg,rgba(255,255,255,.12),transparent 35%),#81596a}
+.block.allowed{
+  z-index:3;
+  cursor:pointer;
+  outline:3px solid var(--yellow);
+  outline-offset:-3px;
+  filter:brightness(1.35) saturate(1.35);
+  box-shadow:inset 0 0 8px rgba(255,226,93,.35);
+}
+.block.allowed:active{transform:scale(.86)}
+.block.empty{
+  cursor:default;
+  background:#172a3b!important;
+  box-shadow:inset 0 0 8px rgba(0,0,0,.35);
+}
+.ore{
+  position:absolute;
+  left:23%;top:23%;
+  width:54%;height:54%;
+  border-radius:22%;
+  transform:rotate(45deg);
+  border:1px solid rgba(255,255,255,.85);
+  box-shadow:0 0 7px rgba(255,255,255,.28)
+}
+.coal{background:#27394a}
+.copper{background:#ff914d}
+.emerald{background:#2ff08d}
+.ruby{background:#ff4665}
+.diamond{background:#59eaff}
+.gold{background:#ffd43c}
+.pick{
+  position:absolute;
+  z-index:9;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+  transition:left .11s ease,top .11s ease;
+}
+.pick span{
+  width:82%;height:82%;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:#ffd84d;
+  border:2px solid white;
+  color:#18212a;
+  font-size:14px;
+  box-shadow:0 0 12px rgba(255,216,77,.9)
+}
+.sidebar{display:flex;flex-direction:column;gap:10px;position:sticky;top:10px}
+.section{padding:10px}
+.big-cash{background:linear-gradient(#1b3c5e,#16324f);border:1px solid #3a658f;border-radius:12px;padding:12px;text-align:center;margin-bottom:8px}
+.big-cash strong{display:block;font-size:27px}
+.bar{height:10px;border-radius:999px;background:#09131f;overflow:hidden;margin:7px 0 10px}
+.fill{height:100%;width:0;background:linear-gradient(90deg,#43e38f,#ffe05c)}
+.inv{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.item{background:#193451;border:1px solid #315a82;border-radius:10px;padding:7px}
+.row{display:flex;justify-content:space-between;gap:6px}
+.item strong{font-size:11px}
+.btn{width:100%;min-height:44px;border:0;border-radius:11px;padding:10px;font-weight:900;cursor:pointer;background:linear-gradient(#ffe66f,#f7bf39);color:#241a06}
+.btn:disabled{opacity:.45}
+.upgrade{width:100%;margin-top:7px;border:1px solid #3a648d;border-radius:11px;background:linear-gradient(#1d3c5e,#17314e);color:white;padding:10px;text-align:left;cursor:pointer}
+.upgrade:disabled{opacity:.45}
+.upgrade strong{display:block;font-size:12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}
+.legend span{font-size:10px;color:#c4d5e6;display:flex;align-items:center;gap:4px}
+.swatch{width:9px;height:9px;border-radius:2px;display:inline-block}
+.notice{margin-top:8px;padding:8px;border-radius:9px;background:#17314b;color:#b9cde0;font-size:10px;line-height:1.35}
+.float{position:absolute;z-index:15;font-size:10px;font-weight:900;pointer-events:none;animation:up .55s ease forwards}
+@keyframes up{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-22px)}}
+@media(max-width:820px){
+  .topbar{grid-template-columns:repeat(2,1fr)}
+  .layout{grid-template-columns:1fr}
+  .sidebar{position:static}
+  .mine{height:68vh;min-height:520px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="stat"><div class="label">cash</div><div class="value">$<span id="cash">0</span></div></div>
+    <div class="stat"><div class="label">depth</div><div class="value"><span id="depth">0</span>m</div></div>
+    <div class="stat"><div class="label">bag</div><div class="value"><span id="bagCount">0</span>/<span id="bagMax">12</span></div></div>
+    <div class="stat"><div class="label">power</div><div class="value"><span id="power">1</span></div></div>
+  </div>
+
+  <div class="layout">
+    <section class="card">
+      <div class="head">
+        <h2>mine grid</h2>
+        <span class="small">tap the yellow block next to the pickaxe</span>
+      </div>
+      <div class="mine-shell">
+        <div class="mine" id="mine">
+          <div class="board" id="board">
+            <div class="grid" id="grid"></div>
+            <div class="pick" id="pick"><span>⛏</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="swatch coal"></i>coal</span>
+        <span><i class="swatch copper"></i>copper</span>
+        <span><i class="swatch emerald"></i>emerald</span>
+        <span><i class="swatch ruby"></i>ruby</span>
+        <span><i class="swatch diamond"></i>diamond</span>
+        <span><i class="swatch gold"></i>gold</span>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <section class="card">
+        <div class="head"><h2>inventory</h2><span class="small" id="bagStatus">room left</span></div>
+        <div class="section">
+          <div class="big-cash"><span class="small">bag value</span><strong>$<span id="bagValue">0</span></strong></div>
+          <div class="bar"><div class="fill" id="fill"></div></div>
+          <div class="inv" id="inventory"></div>
+          <button class="btn" id="cashBtn" type="button" style="margin-top:8px">cash out</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="head"><h2>upgrades</h2><span class="small">shop</span></div>
+        <div class="section">
+          <button class="upgrade" id="powerBtn" type="button"><strong>stronger pickaxe</strong><span class="small">+1 mining power · <span id="powerCost">$40</span></span></button>
+          <button class="upgrade" id="bagBtn" type="button"><strong>bigger backpack</strong><span class="small">+8 inventory slots · <span id="bagCost">$60</span></span></button>
+          <button class="upgrade" id="valueBtn" type="button"><strong>better ore prices</strong><span class="small">+20% sell value · <span id="valueCost">$100</span></span></button>
+          <div class="notice">pickaxe starts at the top center. only left, right, and directly below are mineable.</div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+  const COLS = 28;
+  const ROWS = 120;
+  const CELL = 22;
+  const GAP = 1;
+  const START_COL = Math.floor(COLS / 2);
+
+  const gemDefs = {
+    coal:{name:'coal',value:3,cls:'coal'},
+    copper:{name:'copper',value:8,cls:'copper'},
+    emerald:{name:'emerald',value:18,cls:'emerald'},
+    ruby:{name:'ruby',value:40,cls:'ruby'},
+    diamond:{name:'diamond',value:90,cls:'diamond'},
+    gold:{name:'gold',value:60,cls:'gold'}
+  };
+
+  const state = {
+    cash:0, depth:0, bagMax:12, power:1, sellMult:1,
+    powerCost:40, bagCost:60, valueCost:100,
+    pick:{r:0,c:START_COL},
+    bag:{coal:0,copper:0,emerald:0,ruby:0,diamond:0,gold:0},
+    cells:[]
+  };
+
+  const grid = document.getElementById('grid');
+  const board = document.getElementById('board');
+  const mine = document.getElementById('mine');
+  const pick = document.getElementById('pick');
+  const $ = id => document.getElementById(id);
+
+  function idx(r,c){ return r*COLS+c; }
+  function cellAt(r,c){ return state.cells[idx(r,c)]; }
+  function bagCount(){ return Object.values(state.bag).reduce((a,b)=>a+b,0); }
+  function gemValue(k){ return Math.floor(gemDefs[k].value * state.sellMult); }
+  function bagValue(){ return Object.entries(state.bag).reduce((s,[k,v])=>s+gemValue(k)*v,0); }
+
+  function oreForDepth(d){
+    const x=Math.random();
+    if(d<25) return x<.62?'coal':x<.9?'copper':'emerald';
+    if(d<70) return x<.32?'coal':x<.60?'copper':x<.82?'emerald':x<.95?'gold':'ruby';
+    if(d<140) return x<.16?'coal':x<.35?'copper':x<.58?'emerald':x<.77?'gold':x<.94?'ruby':'diamond';
+    return x<.08?'coal':x<.22?'copper':x<.43?'emerald':x<.64?'gold':x<.82?'ruby':'diamond';
+  }
+
+  function makeCell(r,c){
+    return {
+      r,c,
+      empty:false,
+      hp:1 + Math.floor(r/40),
+      ore:Math.random()<.42 ? oreForDepth(r) : null
+    };
+  }
+
+  function buildMine(){
+    state.cells=[];
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++) state.cells.push(makeCell(r,c));
+    }
+    state.pick={r:0,c:START_COL};
+    cellAt(0,START_COL).empty=true;
+  }
+
+  function mineable(r,c){
+    const pr=state.pick.r, pc=state.pick.c;
+    return (r===pr && c===pc-1) || (r===pr && c===pc+1) || (r===pr+1 && c===pc);
+  }
+
+  function makeBoard(){
+    const boardW = COLS*CELL + (COLS-1)*GAP;
+    const boardH = ROWS*CELL + (ROWS-1)*GAP;
+
+    board.style.width = boardW+'px';
+    board.style.height = boardH+'px';
+
+    grid.style.gridTemplateColumns = `repeat(${COLS}, ${CELL}px)`;
+    grid.style.gridTemplateRows = `repeat(${ROWS}, ${CELL}px)`;
+
+    grid.innerHTML='';
+
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const cell=cellAt(r,c);
+        const btn=document.createElement('button');
+        btn.type='button';
+        btn.className='block';
+        btn.dataset.r=r;
+        btn.dataset.c=c;
+
+        if(cell.empty){
+          btn.classList.add('empty');
+          btn.disabled=true;
+        }
+
+        if(cell.ore){
+          const ore=document.createElement('span');
+          ore.className='ore '+gemDefs[cell.ore].cls;
+          btn.appendChild(ore);
+        }
+
+        grid.appendChild(btn);
+      }
+    }
+
+    refreshMineable();
+    placePick();
+  }
+
+  function buttonAt(r,c){
+    if(r<0 || r>=ROWS || c<0 || c>=COLS) return null;
+    return grid.children[idx(r,c)];
+  }
+
+  function refreshMineable(){
+    grid.querySelectorAll('.allowed').forEach(el=>el.classList.remove('allowed'));
+
+    const options = [
+      [state.pick.r, state.pick.c-1],
+      [state.pick.r, state.pick.c+1],
+      [state.pick.r+1, state.pick.c]
+    ];
+
+    options.forEach(([r,c])=>{
+      const cell = (r>=0 && r<ROWS && c>=0 && c<COLS) ? cellAt(r,c) : null;
+      const btn = buttonAt(r,c);
+      if(cell && btn && !cell.empty){
+        btn.classList.add('allowed');
+      }
+    });
+  }
+
+  function placePick(){
+    const step = CELL + GAP;
+    pick.style.width = CELL+'px';
+    pick.style.height = CELL+'px';
+    pick.style.left = (state.pick.c*step)+'px';
+    pick.style.top = (state.pick.r*step)+'px';
+  }
+
+  function centerTopOnLoad(){
+    const step=CELL+GAP;
+    const pickX=state.pick.c*step + CELL/2;
+    mine.scrollLeft=Math.max(0,pickX-mine.clientWidth/2);
+    mine.scrollTop=0;
+  }
+
+  function keepPickVisible(){
+    const step=CELL+GAP;
+    const y=state.pick.r*step;
+    mine.scrollTo({
+      top:Math.max(0,y-mine.clientHeight*.3),
+      left:Math.max(0,state.pick.c*step-mine.clientWidth*.45),
+      behavior:'smooth'
+    });
+  }
+
+  function mineCell(r,c){
+    if(!mineable(r,c)) return;
+
+    const cell=cellAt(r,c);
+    if(!cell || cell.empty) return;
+
+    if(bagCount()>=state.bagMax){
+      showFloat('bag full',r,c,'#ff7080');
+      return;
+    }
+
+    cell.hp-=state.power;
+
+    if(cell.hp>0){
+      showFloat('-'+state.power+' hp',r,c,'#ffe56f');
+      return;
+    }
+
+    cell.empty=true;
+
+    if(cell.ore){
+      state.bag[cell.ore]+=1;
+      showFloat('+'+gemDefs[cell.ore].name,r,c,'#ffffff');
+    }else{
+      showFloat('+rock',r,c,'#c1d3e5');
+    }
+
+    const btn=buttonAt(r,c);
+    btn.className='block empty';
+    btn.innerHTML='';
+    btn.disabled=true;
+
+    state.pick={r,c};
+    state.depth=Math.max(state.depth,r);
+
+    refreshMineable();
+    placePick();
+    updateUI();
+    keepPickVisible();
+  }
+
+  function showFloat(text,r,c,color){
+    const step=CELL+GAP;
+    const f=document.createElement('div');
+    f.className='float';
+    f.textContent=text;
+    f.style.color=color;
+    f.style.left=(c*step+CELL/2)+'px';
+    f.style.top=(r*step+2)+'px';
+    board.appendChild(f);
+    setTimeout(()=>f.remove(),560);
+  }
+
+  grid.addEventListener('click',(e)=>{
+    const btn=e.target.closest('.block');
+    if(!btn || !btn.classList.contains('allowed')) return;
+    mineCell(Number(btn.dataset.r),Number(btn.dataset.c));
+  });
+
+  function updateUI(){
+    $('cash').textContent=state.cash.toLocaleString();
+    $('depth').textContent=state.depth.toLocaleString();
+    $('bagCount').textContent=bagCount();
+    $('bagMax').textContent=state.bagMax;
+    $('power').textContent=state.power;
+    $('bagValue').textContent=bagValue().toLocaleString();
+    $('fill').style.width=Math.min(100,bagCount()/state.bagMax*100)+'%';
+    $('bagStatus').textContent=bagCount()>=state.bagMax?'bag full':'room left';
+
+    const inv=$('inventory');
+    inv.innerHTML='';
+    Object.entries(gemDefs).forEach(([key,g])=>{
+      const el=document.createElement('div');
+      el.className='item';
+      el.innerHTML='<div class="row"><strong>'+g.name+'</strong><span>x'+state.bag[key]+'</span></div><div class="small">$'+gemValue(key)+' each</div>';
+      inv.appendChild(el);
+    });
+
+    const val=bagValue();
+    $('cashBtn').textContent='cash out · $'+val;
+    $('cashBtn').disabled=val===0;
+
+    $('powerCost').textContent='$'+state.powerCost;
+    $('bagCost').textContent='$'+state.bagCost;
+    $('valueCost').textContent='$'+state.valueCost;
+
+    $('powerBtn').disabled=state.cash<state.powerCost;
+    $('bagBtn').disabled=state.cash<state.bagCost;
+    $('valueBtn').disabled=state.cash<state.valueCost;
+  }
+
+  $('cashBtn').addEventListener('click',()=>{
+    const val=bagValue();
+    if(val<=0)return;
+    state.cash+=val;
+    Object.keys(state.bag).forEach(k=>state.bag[k]=0);
+    updateUI();
+  });
+
+  $('powerBtn').addEventListener('click',()=>{
+    if(state.cash<state.powerCost)return;
+    state.cash-=state.powerCost;
+    state.power+=1;
+    state.powerCost=Math.ceil(state.powerCost*1.75);
+    updateUI();
+  });
+
+  $('bagBtn').addEventListener('click',()=>{
+    if(state.cash<state.bagCost)return;
+    state.cash-=state.bagCost;
+    state.bagMax+=8;
+    state.bagCost=Math.ceil(state.bagCost*1.7);
+    updateUI();
+  });
+
+  $('valueBtn').addEventListener('click',()=>{
+    if(state.cash<state.valueCost)return;
+    state.cash-=state.valueCost;
+    state.sellMult*=1.2;
+    state.valueCost=Math.ceil(state.valueCost*2);
+    updateUI();
+  });
+
+  buildMine();
+  makeBoard();
+  updateUI();
+  requestAnimationFrame(centerTopOnLoad);
+})();
+</script>
+</body>
+</html>
