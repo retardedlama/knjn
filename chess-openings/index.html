@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opening Trainer</title>
+<meta name="description" content="Learn every chess opening: search 3,800+ named openings, step through them with explanations, drill them with spaced repetition and check every move with Stockfish.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 45 45'%3E%3Cpath d='M22 10c10.5 1 16.5 8 16 29H15c0-9 10-6.5 8-21' fill='%23fff' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M24 18c.4 2.9-5.5 7.4-8 9-3 2-2.8 4.3-5 4-1-.9 1.4-3 0-3-1 0 .2 1.2-1 2-1 0-4 1-4-4 0-2 6-12 6-12s1.9-1.9 2-3.5c-.7-1-.5-2-.5-3 1-1 3 2.5 3 2.5h2s.8-2 2.5-3c1 0 1 3 1 3' fill='%23fff' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="vendor/chessground/chessground.base.css">
+<link rel="stylesheet" href="vendor/chessground/chessground.brown.css">
+<link rel="stylesheet" href="vendor/chessground/chessground.cburnett.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="board-brown">
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menuBtn" aria-label="Browse openings" title="Browse openings">
+    <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+  <a class="brand" href="#" id="brand">
+    <svg viewBox="0 0 45 45" aria-hidden="true"><path d="M22 10c10.5 1 16.5 8 16 29H15c0-9 10-6.5 8-21" /><path d="M24 18c.4 2.9-5.5 7.4-8 9-3 2-2.8 4.3-5 4-1-.9 1.4-3 0-3-1 0 .2 1.2-1 2-1 0-4 1-4-4 0-2 6-12 6-12s1.9-1.9 2-3.5c-.7-1-.5-2-.5-3 1-1 3 2.5 3 2.5h2s.8-2 2.5-3c1 0 1 3 1 3"/></svg>
+    <span>Opening<b>Trainer</b></span>
+  </a>
+  <nav class="modes" id="modes" aria-label="Mode">
+    <button data-mode="learn" class="active">Learn</button>
+    <button data-mode="practice">Practice</button>
+    <button data-mode="explore">Explore</button>
+    <button data-mode="play">Play</button>
+    <button data-mode="quiz">Quiz</button>
+  </nav>
+  <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+  </button>
+</header>
+
+<main class="layout">
+  <aside class="side" id="side" aria-label="Opening browser">
+    <div class="side-head">
+      <label class="search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="search" type="search" autocomplete="off" spellcheck="false" placeholder="Search openings…" title="Search by name, ECO code (B90) or moves (e4 c5 Nf3)">
+      </label>
+      <div class="side-tabs" id="sideTabs">
+        <button data-tab="popular" class="active">Popular</button>
+        <button data-tab="families">A–Z</button>
+        <button data-tab="mine">My lines</button>
+      </div>
+    </div>
+    <div class="side-list" id="sideList"><div class="loading">Loading openings…</div></div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <section class="board-col">
+    <div class="opening-bar" id="openingBar"></div>
+    <div class="board-area">
+      <div class="eval-bar" id="evalBar" title="Stockfish evaluation">
+        <div class="eval-fill" id="evalFill"></div>
+        <div class="eval-ticks"></div>
+        <span class="eval-text" id="evalText"></span>
+      </div>
+      <div class="board-wrap" id="boardWrap">
+        <div id="board"></div>
+        <div class="promo hidden" id="promo"></div>
+        <div class="board-banner hidden" id="banner"></div>
+      </div>
+    </div>
+    <div class="controls" id="controls">
+      <button id="btnFlip" title="Flip board (F)" aria-label="Flip board"><svg viewBox="0 0 24 24"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></svg></button>
+      <div class="nav">
+        <button id="btnFirst" title="First move (↑)" aria-label="First move"><svg viewBox="0 0 24 24"><path d="M6 5v14M18 6l-8 6 8 6z"/></svg></button>
+        <button id="btnPrev" title="Previous move (←)" aria-label="Previous move"><svg viewBox="0 0 24 24"><path d="M16 6l-8 6 8 6z"/></svg></button>
+        <button id="btnNext" title="Next move (→)" aria-label="Next move"><svg viewBox="0 0 24 24"><path d="M8 6l8 6-8 6z"/></svg></button>
+        <button id="btnLast" title="Last move (↓)" aria-label="Last move"><svg viewBox="0 0 24 24"><path d="M18 5v14M6 6l8 6-8 6z"/></svg></button>
+      </div>
+      <button id="btnAuto" title="Auto-play the line" aria-label="Auto-play"><svg viewBox="0 0 24 24"><path d="M7 5l11 7-11 7z"/></svg></button>
+    </div>
+  </section>
+
+  <section class="tools" id="tools">
+    <div class="ceval" id="ceval">
+      <div class="ceval-head">
+        <label class="switch" title="Toggle Stockfish (E)"><input type="checkbox" id="engineToggle"><span></span></label>
+        <strong class="ceval-score" id="cevalScore">–</strong>
+        <div class="ceval-info"><span id="cevalName">Stockfish 19</span><small id="cevalDepth">off</small></div>
+      </div>
+      <div class="pvs" id="pvs"></div>
+    </div>
+    <div class="moves" id="moves"></div>
+    <div class="panel" id="panel"></div>
+  </section>
+</main>
+
+<div class="modal hidden" id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="settingsTitle">Settings</h2><button class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="setting"><span>Theme</span><div class="seg" data-setting="theme"><button data-v="dark">Dark</button><button data-v="light">Light</button></div></div>
+    <div class="setting"><span>Board</span><div class="seg" data-setting="board"><button data-v="brown">Brown</button><button data-v="blue">Blue</button><button data-v="green">Green</button><button data-v="grey">Grey</button></div></div>
+    <div class="setting"><span>Sound</span><div class="seg" data-setting="sound"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
+    <div class="setting"><span>Engine depth</span><div class="seg" data-setting="depth"><button data-v="14">14</button><button data-v="18">18</button><button data-v="22">22</button><button data-v="26">26</button></div></div>
+    <div class="setting"><span>Engine lines</span><div class="seg" data-setting="multipv"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button></div></div>
+    <div class="setting"><span>Best-move arrow</span><div class="seg" data-setting="engineArrows"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
+    <div class="setting"><span>Book-move arrow (Learn)</span><div class="seg" data-setting="bookArrows"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
+    <div class="setting danger"><span>Progress</span><button class="btn" id="resetProgress">Reset all progress</button></div>
+    <p class="fine">Opening names: <a href="https://github.com/lichess-org/chess-openings" target="_blank" rel="noopener">lichess-org/chess-openings</a> (CC0). Engine: <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a> (GPLv3). Board: <a href="https://github.com/lichess-org/chessground" target="_blank" rel="noopener">chessground</a> (GPLv3). Rules: <a href="https://github.com/jhlywa/chess.js" target="_blank" rel="noopener">chess.js</a> (BSD).</p>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
