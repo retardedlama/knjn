@@ -426,6 +426,14 @@ details[open] > summary::before { content: "▾ "; }
 .cls-badge { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; padding: 9px 10px; border-radius: var(--radius); background: color-mix(in srgb, var(--c) 16%, transparent); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); }
 .cls-badge > div > b { display: block; color: var(--c); font-size: 15px; }
 .cls-badge > div > span { font-size: 13px; }
+.why { margin-top: 8px; font-size: 13px; line-height: 1.5; }
+.why p { margin: 4px 0; }
+.why b { display: inline !important; color: var(--font-strong) !important; font-size: inherit !important; }
+.why .line, .line { font-variant-numeric: tabular-nums; color: var(--font-strong); font-weight: 600; }
+.why p.line { color: var(--font-dim); font-weight: 500; }
+.best-alt { margin-top: 6px; padding: 7px 9px; border-radius: var(--radius); background: var(--good-soft); border-left: 3px solid var(--good); }
+.best-alt b { color: var(--good) !important; }
+.feedback .why { color: var(--font); }
 .acc-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; text-align: center; gap: 8px; margin-bottom: 8px; }
 .acc-row > div:not(.acc-mid) { background: var(--box-3); border-radius: var(--radius); padding: 6px; }
 .acc-row small { display: block; color: var(--font-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }

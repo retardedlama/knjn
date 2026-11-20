@@ -7,6 +7,7 @@ import { guideFor } from './guides.js';
 import { progress, MASTERY_LABELS } from './progress.js';
 import { sound } from './sound.js';
 import { CLASSES, CLASS_ORDER, classifyMove, glyphIcon, boardGlyph } from './classify.js';
+import { explainLabel } from './reasons.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -721,18 +722,39 @@ function labelBadge(ply) {
   const k = c.display;
   const m = S.moves[ply - 1];
   let text = CLASSES[k].text;
-  const bestSan = c.bestUci && c.bestUci !== uciOf(m) ? pvToSan(m.before, [c.bestUci], 1)[0] : null;
-  if (['inaccuracy', 'mistake', 'blunder', 'miss'].includes(k) && bestSan) text += ` Best was <b>${esc(bestSan)}</b>.`;
   if (k === 'book' && c.key !== 'book') text += ` Stockfish rates it: <b style="color:${CLASSES[c.key].color}">${CLASSES[c.key].label}</b>.`;
   const loss = c.loss >= 0.5 ? ` <span class="muted">(−${c.loss.toFixed(1)}% winning chance)</span>` : '';
-  return `<div class="cls-badge" style="--c:${CLASSES[k].color}">${glyphIcon(k, 'nag big')}<div><b>${CLASSES[k].label}</b><span>${text}${loss}</span></div></div>`;
+  return `<div class="cls-badge" style="--c:${CLASSES[k].color}">${glyphIcon(k, 'nag big')}<div><b>${CLASSES[k].label}</b><span>${text}${loss}</span>${whyFor(ply, c)}</div></div>`;
 }
+
+// "Why" explanation for a labelled move (memoised: building it replays lines).
+const whyMemo = new Map();
+function whyFor(ply, c) {
+  const m = S.moves[ply - 1];
+  const before = linesAt(m.before);
+  if (!before) return '';
+  const after = linesAt(m.after);
+  const key = `${epdOf(m.before)}|${uciOf(m)}|${c.display}|${before.depth}.${before.lines.length}|${after ? after.depth : 0}`;
+  if (!whyMemo.has(key)) {
+    let html = '';
+    try {
+      // For book moves explain the engine's own verdict (Best, Good, Inaccuracy…).
+      html = explainLabel({ move: m, label: c.display === 'book' ? (BAD_KEYS.includes(c.key) ? c.key : 'book') : c.display, before: before.lines, after: after && after.lines });
+    } catch (e) {
+      html = '';
+    }
+    whyMemo.set(key, html);
+  }
+  return whyMemo.get(key);
+}
+const BAD_KEYS = ['inaccuracy', 'mistake', 'blunder', 'miss'];
 
 function refreshVerdicts() {
   const mv = $('moveVerdict');
   if (mv && S.ply > 0) {
     const m = S.moves[S.ply - 1];
-    mv.innerHTML = labelBadge(S.ply) + (engineActive() ? verdictFor(m.before, uciOf(m), m.color, { book: S.ply <= devIndex() || !!S.book.inBook(m.after) }) : '');
+    const badge = labelBadge(S.ply);
+    mv.innerHTML = badge || (engineActive() ? verdictFor(m.before, uciOf(m), m.color, { book: S.ply <= devIndex() || !!S.book.inBook(m.after) }) : '');
   }
   const nv = $('nextVerdict');
   if (nv) {
@@ -1077,6 +1099,19 @@ function practiceMove(m) {
       else if (diff < 1) txt = `Stockfish thinks your move is a bit worse (${fmtPawns(a)} vs ${fmtPawns(b)} for the book move).`;
       else txt = `Stockfish says your move is a real mistake: ${fmtPawns(a)} vs ${fmtPawns(b)} after the book move.`;
       fb.cmp = txt;
+      try {
+        fb.why = explainLabel({
+          move: m,
+          label: diff >= 1 ? 'mistake' : diff >= 0.3 ? 'inaccuracy' : 'good',
+          before: [theirs, mine],
+          after: null,
+          opts: { bestLine: theirs, moveLine: mine, compare: true, bestTitle: 'The book move is' },
+        });
+      } catch (e) {
+        fb.why = '';
+      }
+      const w = $('cmpWhy');
+      if (w) w.innerHTML = fb.why;
       const el = $('cmp');
       if (el) {
         el.textContent = txt;
@@ -1142,7 +1177,7 @@ function practicePanel() {
     <div class="row small muted"><span>${doneN} / ${total} moves</span><span>·</span><span>${P.mistakes} mistake${P.mistakes === 1 ? '' : 's'}</span><span>·</span><span>${P.hints} hint${P.hints === 1 ? '' : 's'}</span></div>`;
   if (P.feedback && !P.done) {
     const cmp = P.feedback.cmp === undefined ? '' : `<div id="cmp" class="small ${P.feedback.cmp ? '' : 'muted'}" style="margin-top:6px">${P.feedback.cmp === null ? 'Asking Stockfish about your move…' : esc(P.feedback.cmp)}</div>`;
-    body += `<div class="feedback ${P.feedback.kind}">${P.feedback.html}${cmp}</div>`;
+    body += `<div class="feedback ${P.feedback.kind}">${P.feedback.html}${cmp}<div id="cmpWhy">${P.feedback.why || ''}</div></div>`;
   }
   if (P.done) {
     const l = P.result;
