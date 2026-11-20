@@ -12,6 +12,8 @@ A browser app for learning chess openings — **all 3,865 named openings and var
 | **Play** | Continue from any position — e.g. the end of an opening you just learned — against Stockfish at 8 levels. |
 | **Quiz** | Watch a sequence of moves and name the opening (popular openings, variations, or all 3,865). |
 
+**Move labels:** every move gets a Stockfish rating: Brilliant !!, Great !, Best ★, Excellent, Good, Book, Inaccuracy ?!, Mistake ?, Miss or Blunder ??. The rating is based on how much winning chance the move gives away compared with the engine's best move. Labels appear on the board, in the move list and in the coach panel. After a game in Play (and in Explore) a review card shows each side's accuracy and how many moves fell into each category. You can turn labels off in Settings.
+
 Also: search by name (`najdorf`), ECO code (`B90`) or moves (`e4 c5 Nf3 d6`); browse 149 opening families A–Z; star openings to build your own repertoire ("My lines"); dark/light theme; four board colours; synthesized move sounds.
 
 **Keyboard:** `←` `→` step, `↑` `↓` first/last, `F` flip board, `E` engine on/off, `H` hint (Practice), `Space` auto-play (Learn), `/` search.
@@ -42,12 +44,13 @@ Progress, favourites and settings are saved on the device (`localStorage`).
 ```
 index.html            page shell
 manifest.webmanifest  app name, icons, colours (installable app)
-sw.js                 service worker: offline cache
+sw.js                 service worker: offline cache + automatic updates (bump VERSION on each release)
 icons/                app icons
 css/style.css         theme (dark/light, board colours, responsive layout)
 js/app.js             UI, modes, board wiring
 js/book.js            opening database, search, position graph (transpositions)
 js/engine.js          UCI wrapper around the Stockfish worker
+js/classify.js        move labels (Brilliant … Blunder) and accuracy
 js/explain.js         move-by-move explanations generated from the position
 js/guides.js          hand-written strategy guides for the main opening families
 js/progress.js        spaced repetition, favourites, settings (localStorage)

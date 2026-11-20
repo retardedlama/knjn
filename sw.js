@@ -3,13 +3,14 @@
 // without a connection. Files are served from the cache and refreshed in the
 // background, so updates arrive on the next launch. Bump VERSION to force a
 // full refresh.
-const VERSION = 'opening-trainer-v2';
+const VERSION = 'opening-trainer-v3';
 const FILES = [
   './',
   'index.html',
   'manifest.webmanifest',
   'css/style.css',
   'js/app.js',
+  'js/classify.js',
   'js/book.js',
   'js/engine.js',
   'js/explain.js',
@@ -33,7 +34,9 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches
       .open(VERSION)
-      .then(cache => cache.addAll(FILES))
+      // cache: 'reload' skips the browser's HTTP cache so an update really
+      // downloads the new files.
+      .then(cache => cache.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });

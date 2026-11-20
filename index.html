@@ -108,6 +108,7 @@
     <div class="setting"><span>Engine depth</span><div class="seg" data-setting="depth"><button data-v="14">14</button><button data-v="18">18</button><button data-v="22">22</button><button data-v="26">26</button></div></div>
     <div class="setting"><span>Engine lines</span><div class="seg" data-setting="multipv"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button></div></div>
     <div class="setting"><span>Best-move arrow</span><div class="seg" data-setting="engineArrows"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
+    <div class="setting"><span>Move labels (Brilliant, Best, Blunder…)</span><div class="seg" data-setting="labels"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
     <div class="setting"><span>Book-move arrow (Learn)</span><div class="seg" data-setting="bookArrows"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
     <div class="setting install-info" id="installInfo"><span>Install as an app</span><div class="small muted" id="installText"></div></div>
     <div class="setting danger"><span>Progress</span><button class="btn" id="resetProgress">Reset all progress</button></div>
@@ -115,6 +116,7 @@
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<button class="update-bar hidden" id="updateBar">A new version is ready — tap to update</button>
 
 <script type="module" src="js/app.js"></script>
 </body>

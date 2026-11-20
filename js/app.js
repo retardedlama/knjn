@@ -6,6 +6,7 @@ import { explainMove, categoryOf, PRINCIPLES } from './explain.js';
 import { guideFor } from './guides.js';
 import { progress, MASTERY_LABELS } from './progress.js';
 import { sound } from './sound.js';
+import { CLASSES, CLASS_ORDER, classifyMove, glyphIcon, boardGlyph } from './classify.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -57,6 +58,7 @@ const S = {
     multipv: progress.setting('multipv', '3'),
     engineArrows: progress.setting('engineArrows', 'on'),
     bookArrows: progress.setting('bookArrows', 'on'),
+    labels: progress.setting('labels', 'on'),
   },
 };
 
@@ -332,6 +334,10 @@ function drawShapes() {
     if (m) shapes.push(P.hintLevel === 1 ? { orig: m.from, brush: 'green' } : { orig: m.from, dest: m.to, brush: 'green' });
   }
   if (S.glyph) shapes.push({ orig: S.glyph.sq, customSvg: { html: GLYPH(S.glyph.good) } });
+  else if (S.ply > 0) {
+    const c = classOf(S.ply);
+    if (c) shapes.push({ orig: S.moves[S.ply - 1].to, customSvg: { html: boardGlyph(c.display) } });
+  }
   cg.setAutoShapes(shapes);
 }
 
@@ -402,7 +408,25 @@ function scheduleEngineUi() {
     renderCeval();
     drawShapes();
     refreshVerdicts();
+    refreshLabels();
   }, 160);
+}
+
+// Move labels change only when new engine data lands, so the move list and
+// the review card are refreshed separately (and less often) than the eval.
+let labelsPending = false;
+function refreshLabels() {
+  if (labelsPending) return;
+  labelsPending = true;
+  setTimeout(() => {
+    labelsPending = false;
+    const list = $('moves');
+    const top = list.scrollTop;
+    renderMoves();
+    list.scrollTop = top;
+    const rc = $('reviewCard');
+    if (rc) rc.innerHTML = reviewInner();
+  }, 400);
 }
 
 function cacheLines(fen, lines, depth) {
@@ -424,7 +448,7 @@ function startAnalysis(fen) {
     renderCeval();
     drawShapes();
     refreshVerdicts();
-    backgroundPrev();
+    reviewNext();
     return;
   }
   S.engineState = analysis.ready ? 'running' : 'loading';
@@ -453,7 +477,7 @@ function startAnalysis(fen) {
       if (fen !== fenAt(S.ply)) return;
       S.engineState = 'done';
       scheduleEngineUi();
-      backgroundPrev();
+      reviewNext();
     },
   });
 }
@@ -462,22 +486,100 @@ function legalCount(fen) {
   return new Chess(fen).moves().length;
 }
 
-// Analyse the previous position quietly so "was this move good?" can be answered.
-function backgroundPrev() {
-  if (S.ply === 0 || !(S.mode === 'learn' || S.mode === 'explore')) return;
-  const prev = fenAt(S.ply - 1);
-  const c = S.cache.get(epdOf(prev));
-  if (c && c.depth >= 12) return;
+// ---------------------------------------------------------------- move labels
+
+const REVIEW_DEPTH = 14;
+const labelMemo = new Map();
+
+function labelsActive() {
+  return S.settings.labels === 'on' && engineActive();
+}
+
+function linesAt(fen, minDepth = 10) {
+  const c = S.cache.get(epdOf(fen));
+  return c && c.depth >= minDepth ? c : null;
+}
+
+// Quality label for the move that led to position `ply`, or null while
+// Stockfish hasn't looked at the position yet.
+function classOf(ply) {
+  if (!labelsActive() || ply < 1 || ply > S.moves.length) return null;
+  const m = S.moves[ply - 1];
+  const before = linesAt(m.before);
+  if (!before) return null;
+  const after = linesAt(m.after);
+  const prev = S.moves[ply - 2];
+  const key = `${epdOf(m.before)}|${uciOf(m)}|${before.depth}.${before.lines.length}|${after ? after.depth : 0}|${prev ? uciOf(prev) : ''}`;
+  let r = labelMemo.get(key);
+  if (r === undefined) {
+    r = classifyMove(m, before.lines, after && after.lines, { prevMove: prev });
+    labelMemo.set(key, r);
+  }
+  if (!r) return null;
+  // In Play and Explore, theory moves are shown as "Book" (as on chess sites).
+  // In Learn every move is theory, so the engine's verdict is more useful there.
+  const book = (S.mode === 'play' || S.mode === 'explore') && S.book.inBook(m.after) && r.key !== 'brilliant';
+  return { ...r, display: book ? 'book' : r.key, book };
+}
+
+// After the live analysis finishes, quietly analyse every position of the
+// current line so each move can get its label. The position just before the
+// current move goes first. Any new live analysis interrupts this.
+function reviewNext() {
+  if (!labelsActive()) return;
   const here = fenAt(S.ply);
-  analysis.analyse({
-    fen: prev,
-    multipv: 3,
-    depth: 14,
-    onDone(best, lines) {
-      if (lines.length) cacheLines(prev, lines, Math.min(...lines.map(l => l.depth)));
-      if (here === fenAt(S.ply)) refreshVerdicts();
-    },
-  });
+  if (S.evalFen !== here) return;
+  const order = [S.ply - 1];
+  for (let p = 0; p <= S.moves.length; p++) order.push(p);
+  for (const p of order) {
+    if (p < 0 || p > S.moves.length) continue;
+    const fen = fenAt(p);
+    if (linesAt(fen, REVIEW_DEPTH - 2)) continue;
+    if (new Chess(fen).isGameOver()) continue;
+    analysis.analyse({
+      fen,
+      multipv: 2,
+      depth: REVIEW_DEPTH,
+      onDone(best, lines) {
+        if (lines.length) cacheLines(fen, lines, Math.min(...lines.map(l => l.depth)));
+        if (here !== fenAt(S.ply)) return;
+        drawShapes();
+        refreshVerdicts();
+        refreshLabels();
+        reviewNext();
+      },
+    });
+    return;
+  }
+}
+
+function reviewInner() {
+  if (!labelsActive()) return '<p class="muted small">Turn on Stockfish to label every move.</p>';
+  const counts = { w: {}, b: {} };
+  const acc = { w: [], b: [] };
+  let done = 0;
+  for (let p = 1; p <= S.moves.length; p++) {
+    const c = classOf(p);
+    if (!c) continue;
+    done++;
+    const side = S.moves[p - 1].color;
+    counts[side][c.display] = (counts[side][c.display] || 0) + 1;
+    acc[side].push(c.accuracy);
+  }
+  const avg = a => (a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : null);
+  const aw = avg(acc.w);
+  const ab = avg(acc.b);
+  const rows = CLASS_ORDER.filter(k => counts.w[k] || counts.b[k])
+    .map(k => `<tr><td class="cw">${counts.w[k] || ''}</td><td class="cl">${glyphIcon(k)}<span style="color:${CLASSES[k].color}">${CLASSES[k].label}</span></td><td class="cb">${counts.b[k] || ''}</td></tr>`)
+    .join('');
+  const progressNote = done < S.moves.length ? `<p class="muted small">Stockfish is reviewing… ${done} / ${S.moves.length} moves labelled.</p>` : '';
+  return `<div class="acc-row"><div><small>White</small><strong>${aw === null ? '–' : aw + '%'}</strong></div><div class="acc-mid">Accuracy</div><div><small>Black</small><strong>${ab === null ? '–' : ab + '%'}</strong></div></div>
+    ${rows ? `<table class="review">${rows}</table>` : ''}${progressNote}`;
+}
+
+function reviewCard(title = 'Game review') {
+  if (!S.moves.length || S.settings.labels !== 'on') return '';
+  return card(title, `<div id="reviewCard">${reviewInner()}</div>`, `${S.moves.length} moves`);
 }
 
 function renderEvalBar() {
@@ -564,11 +666,24 @@ function verdictFor(fenBefore, uci, color, { book = false } = {}) {
   return `<div class="verdict"><span class="ic ${book ? 'warn' : 'bad'}">${book ? '!' : '?'}</span><span>Not in Stockfish's top ${lines.length}. It prefers <b>${esc(bestSan)}</b> (${fmtPawns(bestScore)}).${book ? ' This is still established theory: gambits and offbeat lines trade a little objective value for practical chances.' : ''}</span></div>`;
 }
 
+function labelBadge(ply) {
+  const c = classOf(ply);
+  if (!c) return '';
+  const k = c.display;
+  const m = S.moves[ply - 1];
+  let text = CLASSES[k].text;
+  const bestSan = c.bestUci && c.bestUci !== uciOf(m) ? pvToSan(m.before, [c.bestUci], 1)[0] : null;
+  if (['inaccuracy', 'mistake', 'blunder', 'miss'].includes(k) && bestSan) text += ` Best was <b>${esc(bestSan)}</b>.`;
+  if (k === 'book' && c.key !== 'book') text += ` Stockfish rates it: <b style="color:${CLASSES[c.key].color}">${CLASSES[c.key].label}</b>.`;
+  const loss = c.loss >= 0.5 ? ` <span class="muted">(−${c.loss.toFixed(1)}% winning chance)</span>` : '';
+  return `<div class="cls-badge" style="--c:${CLASSES[k].color}">${glyphIcon(k, 'nag big')}<div><b>${CLASSES[k].label}</b><span>${text}${loss}</span></div></div>`;
+}
+
 function refreshVerdicts() {
   const mv = $('moveVerdict');
   if (mv && S.ply > 0) {
     const m = S.moves[S.ply - 1];
-    mv.innerHTML = verdictFor(m.before, uciOf(m), m.color, { book: S.ply <= devIndex() || !!S.book.inBook(m.after) });
+    mv.innerHTML = labelBadge(S.ply) + verdictFor(m.before, uciOf(m), m.color, { book: S.ply <= devIndex() || !!S.book.inBook(m.after) });
   }
   const nv = $('nextVerdict');
   if (nv) {
@@ -633,7 +748,9 @@ function renderMoves() {
     if (S.opening && S.mode === 'learn' && i >= dev) cls.push('dev');
     if (i + 1 > S.ply) cls.push('ahead');
     if (hide) cls.push('hidden-mv');
-    html += `<span class="${cls.join(' ')}" data-ply="${i + 1}">${hide ? '????' : esc(m.san)}</span>`;
+    const c = hide ? null : classOf(i + 1);
+    if (c) cls.push('c-' + c.display);
+    html += `<span class="${cls.join(' ')}" data-ply="${i + 1}"><span class="san">${hide ? '????' : esc(m.san)}</span>${c ? glyphIcon(c.display) : ''}</span>`;
   });
   el.innerHTML = html;
   const a = el.querySelector('.active');
@@ -1027,7 +1144,7 @@ function explorePanel() {
   else if (det.exact) info = `<p>This position is the <b>${esc(det.opening.name)}</b> <span class="muted">(${det.opening.eco})</span>.</p><div class="row"><button class="btn small" data-learn="${det.opening.id}">Learn this line</button><button class="btn small" data-practice="${det.opening.id}">Practice it</button></div>`;
   else if (S.book.inBook(fenAt(S.ply))) info = `<p>Still in the opening book. Last named position: <b>${esc(det.opening.name)}</b> after move ${Math.ceil(det.ply / 2)}.</p>`;
   else info = `<p><b>Out of book.</b> The last named position was <b>${esc(det.opening.name)}</b> after move ${Math.ceil(det.ply / 2)}. From here, follow Stockfish's suggestions.</p><button class="btn small" data-learn="${det.opening.id}">Learn ${esc(det.opening.family)}</button>`;
-  return card('Where am I?', info) + bookMovesCard() + (S.ply > 0 ? moveCard({ title: 'Last move' }) : '') + (det ? guideCard(det.opening, false) : '');
+  return card('Where am I?', info) + (S.ply > 0 ? moveCard({ title: 'Last move' }) : '') + bookMovesCard() + reviewCard('Move review') + (det ? guideCard(det.opening, false) : '');
 }
 
 // ---------- play
@@ -1059,7 +1176,7 @@ function playPanel() {
   const buttons = G.over
     ? `<button class="btn primary" data-act="rematch">Play again</button><button class="btn" data-act="analyse">Analyse in Explore</button><button class="btn" data-act="newsetup">New setup</button>`
     : `<button class="btn" data-act="takeback" ${S.moves.length <= G.startPly ? 'disabled' : ''}>Takeback</button><button class="btn" data-act="resign">Resign</button>`;
-  return card(`vs Stockfish · level ${G.level}`, `${status}${bookNote}<div class="row" style="margin-top:10px">${buttons}</div>`) + (S.ply > 0 && G.over ? moveCard({ title: 'Last move' }) : '');
+  return card(`vs Stockfish · level ${G.level}`, `${status}${bookNote}<div class="row" style="margin-top:10px">${buttons}</div>`) + (G.over ? reviewCard('Game review') : '') + (S.ply > 0 && G.over ? moveCard({ title: 'Move' }) : '');
 }
 
 function startGame(fromStart = false) {
@@ -1689,9 +1806,14 @@ function bindEvents() {
       S.settings[key] = b.dataset.v;
       progress.set(key, b.dataset.v);
       applySettings();
-      if (key === 'depth' || key === 'multipv') {
+      if (key === 'depth' || key === 'multipv' || key === 'labels') {
         S.evalFen = null;
         requestEval(true);
+      }
+      if (key === 'labels') {
+        renderMoves();
+        renderPanel.keepScroll = true;
+        renderPanel();
       }
       drawShapes();
       renderCeval();
@@ -1786,7 +1908,34 @@ function setupInstall() {
       ? 'On iPhone/iPad: open this page in <b>Safari</b>, tap the <b>Share</b> button, then <b>Add to Home Screen</b>.'
       : 'Use the green <b>Install app</b> button at the top, or your browser menu → <b>Install app</b> / <b>Add to Home screen</b>. Once installed it works offline.';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
-    navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).catch(() => {});
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker
+      .register(new URL('../sw.js', import.meta.url))
+      .then(reg => {
+        // Look for a new version whenever the app comes back to the foreground.
+        let last = Date.now();
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible' && Date.now() - last > 60000) {
+            last = Date.now();
+            reg.update().catch(() => {});
+          }
+        });
+      })
+      .catch(() => {});
+    // A new version was installed in the background: reload into it right
+    // away at launch, or offer a reload if the user is in the middle of something.
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || setupInstall.reloading) return;
+      const busy = (S.practice && !S.practice.done) || (S.play && !S.play.over);
+      if (performance.now() < 15000 && !busy) {
+        setupInstall.reloading = true;
+        location.reload();
+      } else {
+        const bar = $('updateBar');
+        bar.classList.remove('hidden');
+      }
+    });
+    $('updateBar').addEventListener('click', () => location.reload());
   }
   let deferred = null;
   window.addEventListener('beforeinstallprompt', e => {
