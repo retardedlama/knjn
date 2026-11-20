@@ -1697,13 +1697,25 @@ function bindEvents() {
       renderCeval();
     }
   });
+  // Two-step confirmation (no confirm() dialog: some embedded views block it).
+  let resetArmed = null;
   $('resetProgress').onclick = () => {
-    if (confirm('Reset all practice progress, favourites and quiz stats?')) {
-      progress.reset();
-      renderSide();
-      renderPanel();
-      toast('Progress reset');
+    const btn = $('resetProgress');
+    if (!resetArmed) {
+      btn.textContent = 'Click again to erase everything';
+      resetArmed = setTimeout(() => {
+        resetArmed = null;
+        btn.textContent = 'Reset all progress';
+      }, 4000);
+      return;
     }
+    clearTimeout(resetArmed);
+    resetArmed = null;
+    btn.textContent = 'Reset all progress';
+    progress.reset();
+    renderSide();
+    renderPanel();
+    toast('Progress, favourites and quiz stats erased');
   };
 
   document.addEventListener('keydown', e => {

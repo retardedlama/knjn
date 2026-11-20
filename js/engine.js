@@ -25,12 +25,22 @@ export class Engine {
         reject(err);
         return;
       }
+      const timer = setTimeout(() => reject(new Error('the engine did not start')), 30000);
       this.worker.onmessage = e => this.onLine(String(e.data));
-      this.worker.onerror = e => reject(e.message || e);
+      this.worker.onerror = e => {
+        clearTimeout(timer);
+        reject(e.message || e);
+      };
       this.waiter = {
         token: 'uciok',
         done: () => {
-          this.waiter = { token: 'readyok', done: resolve };
+          this.waiter = {
+            token: 'readyok',
+            done: () => {
+              clearTimeout(timer);
+              resolve();
+            },
+          };
           this.send('isready');
         },
       };
@@ -65,7 +75,8 @@ export class Engine {
    * Scores in lines are from White's point of view.
    */
   analyse(job) {
-    this.start().then(() => {
+    this.start()
+      .then(() => {
       if (this.current) {
         this.current.cancelled = true;
         this.pending = job;
@@ -77,7 +88,8 @@ export class Engine {
         this.pending = job;
         this.startPending();
       }
-    });
+      })
+      .catch(() => {});
     return job;
   }
 
