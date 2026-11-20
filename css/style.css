@@ -109,6 +109,11 @@ b, strong { color: var(--font-strong); font-weight: 600; }
 .icon-btn:hover { background: var(--box-3); color: var(--font-strong); }
 .icon-btn svg, .controls svg, .search svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .menu-btn { display: none; }
+.install-btn { display: flex; align-items: center; gap: 6px; background: var(--good); color: #fff; border: 0; border-radius: var(--radius); padding: 7px 12px; font-weight: 700; font-size: 13px; white-space: nowrap; }
+.install-btn:hover { filter: brightness(1.1); }
+.install-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.install-info > div { flex: 1 0 100%; line-height: 1.5; }
+@media (display-mode: standalone) { .install-btn, .install-info { display: none !important; } }
 
 /* ---------- layout ---------- */
 .layout {
@@ -437,6 +442,8 @@ details[open] > summary::before { content: "▾ "; }
   :root { --gap: 10px; --eval-w: 10px; --board: min(calc(100vw - var(--eval-w) - 2 * var(--gap) - 6px), calc(100vh - 150px)); }
   .topbar { flex-wrap: wrap; height: auto; padding-top: 6px; row-gap: 4px; }
   .brand { flex: 1; font-size: 18px; }
+  .install-btn span { display: none; }
+  .install-btn { padding: 7px 9px; }
   .modes { order: 3; flex: 1 0 100%; overflow-x: auto; scrollbar-width: none; }
   .modes button { flex: 1; padding: 8px 6px; font-size: 12px; }
   .layout { grid-template-columns: minmax(0, 1fr); justify-items: center; padding-top: 8px; }

@@ -16,24 +16,34 @@ Also: search by name (`najdorf`), ECO code (`B90`) or moves (`e4 c5 Nf3 d6`); br
 
 **Keyboard:** `←` `→` step, `↑` `↓` first/last, `F` flip board, `E` engine on/off, `H` hint (Practice), `Space` auto-play (Learn), `/` search.
 
-## Running it
+## Try it / install it as an app
 
-The app is plain static files with no build step, but it must be served over HTTP. ES modules and the Stockfish Web Worker don't load from `file://`.
+**Online (recommended):** this repository is published with GitHub Pages at
+**https://retardedlama.github.io/knjn/**. Open that link on your phone or computer, then install it:
+
+- **Android / Chrome / Edge (desktop too):** tap the green **Install app** button at the top, or browser menu → *Install app* / *Add to Home screen*.
+- **iPhone / iPad:** open the link in **Safari** → **Share** → **Add to Home Screen**.
+
+Once installed it has its own icon, opens full-screen like a normal app and **works offline** (Stockfish and all 3,865 openings are stored on the device).
+
+To turn GitHub Pages on (one time): repository **Settings → Pages → Build and deployment → Source: Deploy from a branch**, pick the branch that holds these files and the `/ (root)` folder, then **Save**. After about a minute the site is live.
+
+**On your own computer:** the files must be served over HTTP (ES modules and the Stockfish worker don't load from `file://`):
 
 ```bash
-cd chess-openings
 python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
-To host it, enable **GitHub Pages** for the repository; the app is then at `https://<user>.github.io/<repo>/chess-openings/`. The single-threaded Stockfish build needs no special server headers.
-
-Progress, favourites and settings are saved in your browser's `localStorage`.
+Progress, favourites and settings are saved on the device (`localStorage`).
 
 ## Layout
 
 ```
 index.html            page shell
+manifest.webmanifest  app name, icons, colours (installable app)
+sw.js                 service worker: offline cache
+icons/                app icons
 css/style.css         theme (dark/light, board colours, responsive layout)
 js/app.js             UI, modes, board wiring
 js/book.js            opening database, search, position graph (transpositions)

@@ -1763,4 +1763,38 @@ async function boot() {
   window.__trainer = { S, book: S.book, selectOpening, setMode };
 }
 
+// ---------------------------------------------------------------- install (PWA)
+
+function setupInstall() {
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  $('installText').innerHTML = standalone
+    ? 'Already installed — you are using the app.'
+    : ios
+      ? 'On iPhone/iPad: open this page in <b>Safari</b>, tap the <b>Share</b> button, then <b>Add to Home Screen</b>.'
+      : 'Use the green <b>Install app</b> button at the top, or your browser menu → <b>Install app</b> / <b>Add to Home screen</b>. Once installed it works offline.';
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
+    navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).catch(() => {});
+  }
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferred = e;
+    $('installBtn').classList.remove('hidden');
+  });
+  $('installBtn').addEventListener('click', async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    await deferred.userChoice.catch(() => null);
+    deferred = null;
+    $('installBtn').classList.add('hidden');
+  });
+  window.addEventListener('appinstalled', () => {
+    $('installBtn').classList.add('hidden');
+    toast('Installed! Open Opening Trainer from your home screen or app list.');
+  });
+}
+
+setupInstall();
+
 boot();
