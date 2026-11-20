@@ -408,6 +408,11 @@ details > summary::before { content: "▸ "; color: var(--font-dim); }
 details[open] > summary::before { content: "▾ "; }
 
 /* ---------- move labels ---------- */
+.controls .labels-btn svg { width: 24px; height: 24px; }
+.controls .labels-btn circle { fill: none; stroke: currentColor; stroke-width: 7; }
+.controls .labels-btn text { fill: currentColor; stroke: none; font: 900 46px Arial, Helvetica, sans-serif; }
+.controls .labels-btn.on { background: var(--good); color: #fff; }
+.seg.multi { flex-wrap: wrap; }
 .nag { width: 15px; height: 15px; flex: none; display: inline-block; vertical-align: -2px; }
 .nag.big { width: 30px; height: 30px; }
 .moves .mv { display: flex; align-items: center; gap: 5px; }

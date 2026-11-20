@@ -58,7 +58,12 @@ const S = {
     multipv: progress.setting('multipv', '3'),
     engineArrows: progress.setting('engineArrows', 'on'),
     bookArrows: progress.setting('bookArrows', 'on'),
-    labels: progress.setting('labels', 'on'),
+    labelModes: Object.assign(
+      progress.setting('labels', 'on') === 'off'
+        ? { learn: false, practice: false, explore: false, play: false, quiz: false }
+        : { learn: true, practice: true, explore: true, play: true, quiz: false },
+      progress.setting('labelModes', {})
+    ),
   },
 };
 
@@ -374,16 +379,24 @@ let evalTimer = null;
 function requestEval(force = false) {
   const fen = fenAt(S.ply);
   if (!engineActive()) {
-    if (S.engineState === 'running') analysis.stop();
-    S.engineState = 'idle';
+    if (S.engineState === 'running' || S.engineState === 'loading') {
+      analysis.stop();
+      reviewFen = null;
+    }
+    if (S.engineState !== 'error') S.engineState = 'idle';
     S.evalFen = null;
     S.lines = [];
     S.linesFen = null;
     renderCeval();
+    if (labelsActive()) {
+      clearTimeout(evalTimer);
+      evalTimer = setTimeout(reviewNext, 150);
+    }
     return;
   }
   if (fen === S.evalFen && !force) return;
   S.evalFen = fen;
+  reviewFen = null;
   const cached = S.cache.get(epdOf(fen));
   S.lines = cached ? cached.lines : [];
   S.linesFen = cached ? fen : null;
@@ -491,8 +504,27 @@ function legalCount(fen) {
 const REVIEW_DEPTH = 14;
 const labelMemo = new Map();
 
+// Labels have their own switch per mode, independent of the engine display:
+// in a game you can see move labels while the eval and arrows stay hidden.
+function labelsOn(mode = S.mode) {
+  return !!S.settings.labelModes[mode];
+}
+
 function labelsActive() {
-  return S.settings.labels === 'on' && engineActive();
+  return labelsOn() && S.engineState !== 'error';
+}
+
+function toggleLabels() {
+  const m = S.mode;
+  S.settings.labelModes[m] = !S.settings.labelModes[m];
+  progress.set('labelModes', S.settings.labelModes);
+  applySettings();
+  toast(`Move labels ${labelsOn() ? 'on' : 'off'} in ${m[0].toUpperCase() + m.slice(1)}`);
+  renderMoves();
+  drawShapes();
+  renderPanel.keepScroll = true;
+  renderPanel();
+  if (labelsOn()) reviewNext();
 }
 
 function linesAt(fen, minDepth = 10) {
@@ -525,22 +557,32 @@ function classOf(ply) {
 // After the live analysis finishes, quietly analyse every position of the
 // current line so each move can get its label. The position just before the
 // current move goes first. Any new live analysis interrupts this.
+let reviewFen = null;
 function reviewNext() {
   if (!labelsActive()) return;
   const here = fenAt(S.ply);
-  if (S.evalFen !== here) return;
-  const order = [S.ply - 1];
-  for (let p = 0; p <= S.moves.length; p++) order.push(p);
+  // The live analysis of the current position goes first.
+  if (engineActive() && (S.evalFen !== here || S.engineState === 'running' || S.engineState === 'loading')) return;
+  // Newest moves first (so a game's last move is labelled quickly), then the rest.
+  const order = [S.ply - 1, S.ply];
+  for (let p = S.moves.length; p >= 0; p--) order.push(p);
   for (const p of order) {
     if (p < 0 || p > S.moves.length) continue;
     const fen = fenAt(p);
     if (linesAt(fen, REVIEW_DEPTH - 2)) continue;
     if (new Chess(fen).isGameOver()) continue;
+    if (reviewFen === fen) return; // already being analysed
+    reviewFen = fen;
+    analysis.start().catch(err => {
+      S.engineState = 'error';
+      S.engineError = String(err);
+    });
     analysis.analyse({
       fen,
       multipv: 2,
       depth: REVIEW_DEPTH,
       onDone(best, lines) {
+        if (reviewFen === fen) reviewFen = null;
         if (lines.length) cacheLines(fen, lines, Math.min(...lines.map(l => l.depth)));
         if (here !== fenAt(S.ply)) return;
         drawShapes();
@@ -554,7 +596,7 @@ function reviewNext() {
 }
 
 function reviewInner() {
-  if (!labelsActive()) return '<p class="muted small">Turn on Stockfish to label every move.</p>';
+  if (!labelsActive()) return '<p class="muted small">Move labels are off for this mode.</p>';
   const counts = { w: {}, b: {} };
   const acc = { w: [], b: [] };
   let done = 0;
@@ -577,8 +619,15 @@ function reviewInner() {
     ${rows ? `<table class="review">${rows}</table>` : ''}${progressNote}`;
 }
 
+// During a game: just the label of the move on the board (no engine lines).
+function labelOnlyCard() {
+  if (S.play && S.play.over) return '';
+  const m = S.moves[S.ply - 1];
+  return card('Last move', `<div class="move-head"><span class="san">${esc(moveLabel(S.ply, m.san))}</span><span class="who">${m.color === 'w' ? 'White' : 'Black'}</span></div><div id="moveVerdict"></div>`);
+}
+
 function reviewCard(title = 'Game review') {
-  if (!S.moves.length || S.settings.labels !== 'on') return '';
+  if (!S.moves.length || !labelsOn()) return '';
   return card(title, `<div id="reviewCard">${reviewInner()}</div>`, `${S.moves.length} moves`);
 }
 
@@ -683,7 +732,7 @@ function refreshVerdicts() {
   const mv = $('moveVerdict');
   if (mv && S.ply > 0) {
     const m = S.moves[S.ply - 1];
-    mv.innerHTML = labelBadge(S.ply) + verdictFor(m.before, uciOf(m), m.color, { book: S.ply <= devIndex() || !!S.book.inBook(m.after) });
+    mv.innerHTML = labelBadge(S.ply) + (engineActive() ? verdictFor(m.before, uciOf(m), m.color, { book: S.ply <= devIndex() || !!S.book.inBook(m.after) }) : '');
   }
   const nv = $('nextVerdict');
   if (nv) {
@@ -1176,7 +1225,7 @@ function playPanel() {
   const buttons = G.over
     ? `<button class="btn primary" data-act="rematch">Play again</button><button class="btn" data-act="analyse">Analyse in Explore</button><button class="btn" data-act="newsetup">New setup</button>`
     : `<button class="btn" data-act="takeback" ${S.moves.length <= G.startPly ? 'disabled' : ''}>Takeback</button><button class="btn" data-act="resign">Resign</button>`;
-  return card(`vs Stockfish · level ${G.level}`, `${status}${bookNote}<div class="row" style="margin-top:10px">${buttons}</div>`) + (G.over ? reviewCard('Game review') : '') + (S.ply > 0 && G.over ? moveCard({ title: 'Move' }) : '');
+  return card(`vs Stockfish · level ${G.level}`, `${status}${bookNote}<div class="row" style="margin-top:10px">${buttons}</div>`) + (labelsOn() && S.ply > 0 ? labelOnlyCard() : '') + reviewCard(G.over ? 'Game review' : 'Live review') + (S.ply > 0 && G.over ? moveCard({ title: 'Move' }) : '');
 }
 
 function startGame(fromStart = false) {
@@ -1476,6 +1525,7 @@ function setMode(mode, { silent = false } = {}) {
   const prev = S.mode;
   S.mode = mode;
   document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  applySettings();
   if (prev === 'play' && player) player.stop();
   if (prev === 'quiz' && S.quiz) clearTimeout(S.quiz.timer);
   S.practice = null;
@@ -1587,10 +1637,16 @@ function applySettings() {
   document.body.classList.remove('board-brown', 'board-blue', 'board-green', 'board-grey');
   document.body.classList.add('board-' + s.board);
   sound.setEnabled(s.sound === 'on');
-  document.querySelectorAll('#settings .seg').forEach(seg => {
+  document.querySelectorAll('#settings .seg[data-setting]').forEach(seg => {
     const v = s[seg.dataset.setting];
     seg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.v === String(v)));
   });
+  document.querySelectorAll('#settings [data-label-modes] button').forEach(b => b.classList.toggle('active', !!s.labelModes[b.dataset.v]));
+  const lb = $('btnLabels');
+  if (lb) {
+    lb.classList.toggle('on', labelsOn());
+    lb.title = `Move labels ${labelsOn() ? 'on' : 'off'} in this mode (L)`;
+  }
 }
 
 // ---------------------------------------------------------------- events
@@ -1608,6 +1664,7 @@ function bindEvents() {
   $('btnNext').onclick = () => nav(1);
   $('btnLast').onclick = () => nav('last');
   $('btnFlip').onclick = flip;
+  $('btnLabels').onclick = toggleLabels;
   $('btnAuto').onclick = () => {
     sound.unlock();
     if (navAllowed()) startAuto();
@@ -1800,20 +1857,28 @@ function bindEvents() {
   $('settingsBtn').onclick = () => $('settings').classList.remove('hidden');
   $('settings').addEventListener('click', e => {
     if (e.target === $('settings') || e.target.closest('[data-close]')) return $('settings').classList.add('hidden');
-    const b = e.target.closest('.seg button');
+    const lm = e.target.closest('[data-label-modes] button');
+    if (lm) {
+      const m = lm.dataset.v;
+      S.settings.labelModes[m] = !S.settings.labelModes[m];
+      progress.set('labelModes', S.settings.labelModes);
+      applySettings();
+      renderMoves();
+      drawShapes();
+      renderPanel.keepScroll = true;
+      renderPanel();
+      if (labelsOn()) reviewNext();
+      return;
+    }
+    const b = e.target.closest('.seg[data-setting] button');
     if (b) {
       const key = b.parentElement.dataset.setting;
       S.settings[key] = b.dataset.v;
       progress.set(key, b.dataset.v);
       applySettings();
-      if (key === 'depth' || key === 'multipv' || key === 'labels') {
+      if (key === 'depth' || key === 'multipv') {
         S.evalFen = null;
         requestEval(true);
-      }
-      if (key === 'labels') {
-        renderMoves();
-        renderPanel.keepScroll = true;
-        renderPanel();
       }
       drawShapes();
       renderCeval();
@@ -1854,6 +1919,7 @@ function bindEvents() {
       ArrowDown: () => nav('last'),
       End: () => nav('last'),
       f: flip,
+      l: toggleLabels,
       e: toggleEngine,
       h: practiceHint,
       ' ': () => (S.mode === 'learn' ? startAuto() : null),

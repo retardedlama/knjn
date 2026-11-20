@@ -12,11 +12,11 @@ A browser app for learning chess openings — **all 3,865 named openings and var
 | **Play** | Continue from any position — e.g. the end of an opening you just learned — against Stockfish at 8 levels. |
 | **Quiz** | Watch a sequence of moves and name the opening (popular openings, variations, or all 3,865). |
 
-**Move labels:** every move gets a Stockfish rating: Brilliant !!, Great !, Best ★, Excellent, Good, Book, Inaccuracy ?!, Mistake ?, Miss or Blunder ??. The rating is based on how much winning chance the move gives away compared with the engine's best move. Labels appear on the board, in the move list and in the coach panel. After a game in Play (and in Explore) a review card shows each side's accuracy and how many moves fell into each category. You can turn labels off in Settings.
+**Move labels:** every move gets a Stockfish rating: Brilliant !!, Great !, Best ★, Excellent, Good, Book, Inaccuracy ?!, Mistake ?, Miss or Blunder ??. The rating is based on how much winning chance the move gives away compared with the engine's best move. Labels appear on the board, in the move list and in the coach panel. After a game in Play (and in Explore) a review card shows each side's accuracy and how many moves fell into each category. Labels can be switched on or off separately for each mode (green **!?** button under the board, the `L` key, or Settings). They work without the engine display, so you can play Stockfish with live labels while the evaluation and best-move arrows stay hidden.
 
 Also: search by name (`najdorf`), ECO code (`B90`) or moves (`e4 c5 Nf3 d6`); browse 149 opening families A–Z; star openings to build your own repertoire ("My lines"); dark/light theme; four board colours; synthesized move sounds.
 
-**Keyboard:** `←` `→` step, `↑` `↓` first/last, `F` flip board, `E` engine on/off, `H` hint (Practice), `Space` auto-play (Learn), `/` search.
+**Keyboard:** `←` `→` step, `↑` `↓` first/last, `F` flip board, `L` move labels on/off, `E` engine on/off, `H` hint (Practice), `Space` auto-play (Learn), `/` search.
 
 ## Try it / install it as an app
 

@@ -74,6 +74,7 @@
       </div>
     </div>
     <div class="controls" id="controls">
+      <button id="btnLabels" class="labels-btn" title="Move labels (L)" aria-label="Move labels on/off"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44"/><text x="50" y="68" text-anchor="middle">!?</text></svg></button>
       <button id="btnFlip" title="Flip board (F)" aria-label="Flip board"><svg viewBox="0 0 24 24"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></svg></button>
       <div class="nav">
         <button id="btnFirst" title="First move (↑)" aria-label="First move"><svg viewBox="0 0 24 24"><path d="M6 5v14M18 6l-8 6 8 6z"/></svg></button>
@@ -108,7 +109,7 @@
     <div class="setting"><span>Engine depth</span><div class="seg" data-setting="depth"><button data-v="14">14</button><button data-v="18">18</button><button data-v="22">22</button><button data-v="26">26</button></div></div>
     <div class="setting"><span>Engine lines</span><div class="seg" data-setting="multipv"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button></div></div>
     <div class="setting"><span>Best-move arrow</span><div class="seg" data-setting="engineArrows"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
-    <div class="setting"><span>Move labels (Brilliant, Best, Blunder…)</span><div class="seg" data-setting="labels"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
+    <div class="setting"><span>Move labels (Brilliant … Blunder)<br><small class="muted">Tap a mode to turn its labels on or off</small></span><div class="seg multi" data-label-modes><button data-v="learn">Learn</button><button data-v="practice">Practice</button><button data-v="explore">Explore</button><button data-v="play">Play</button><button data-v="quiz">Quiz</button></div></div>
     <div class="setting"><span>Book-move arrow (Learn)</span><div class="seg" data-setting="bookArrows"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
     <div class="setting install-info" id="installInfo"><span>Install as an app</span><div class="small muted" id="installText"></div></div>
     <div class="setting danger"><span>Progress</span><button class="btn" id="resetProgress">Reset all progress</button></div>

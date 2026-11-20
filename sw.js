@@ -3,7 +3,7 @@
 // without a connection. Files are served from the cache and refreshed in the
 // background, so updates arrive on the next launch. Bump VERSION to force a
 // full refresh.
-const VERSION = 'opening-trainer-v3';
+const VERSION = 'opening-trainer-v4';
 const FILES = [
   './',
   'index.html',
